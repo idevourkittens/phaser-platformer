@@ -6,6 +6,8 @@ const PLAYER_ANIMS = {
 	walk: "walk",
 	run: "run",
 	jump: "jump",
+  attack: "attack",
+  cheer: "cheer",
 };
 
 class MainScene extends Phaser.Scene {
@@ -67,6 +69,30 @@ class MainScene extends Phaser.Scene {
 				suffix: ".png",
 			}),
 			frameRate: 10, // frames per second
+			repeat: -1, // infinite repeat
+		});
+
+    player.anims.create({
+			key: PLAYER_ANIMS.attack,
+			frames: player.anims.generateFrameNames("robot", {
+				start: 0,
+				end: 2,
+				prefix: "character_robot_attack",
+				suffix: ".png",
+			}),
+			frameRate: 8, // frames per second
+			repeat: -1, // infinite repeat
+		});
+
+    player.anims.create({
+			key: PLAYER_ANIMS.cheer,
+			frames: player.anims.generateFrameNames("robot", {
+				start: 0,
+				end: 1,
+				prefix: "character_robot_cheer",
+				suffix: ".png",
+			}),
+			frameRate: 5, // frames per second
 			repeat: -1, // infinite repeat
 		});
 

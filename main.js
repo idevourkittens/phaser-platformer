@@ -1,56 +1,110 @@
 import "./style.css";
 import Phaser from "phaser";
 
+const TILE_SIZE = 18;
+
 const PLAYER_ANIMS = {
 	idle: "idle",
 	walk: "walk",
 	run: "run",
 	jump: "jump",
-  attack: "attack",
-  cheer: "cheer",
+	cheer: "cheer",
+	fall: "fall",
 };
 
 class MainScene extends Phaser.Scene {
 	constructor() {
 		super("main-scene");
+
+		this.player;
+		this.map;
+		this.cursors;
+		this.coins;
 	}
 
 	preload() {
 		this.load.atlas("robot", "robot.png", "robot.json");
+
+		this.load.image("marble", "tilesets/marble.png");
+		this.load.image("rock", "tilesets/rock.png");
+		this.load.image("sand", "tilesets/sand.png");
+		this.load.image("stone", "tilesets/stone.png");
+
+		this.load.tilemapTiledJSON("map", "tilesets/map.json");
+
+		this.load.image("coin", "coin.png");
 	}
 
 	create() {
-		// const height = this.scale.height;
-		// const width = this.scale.width;
-
 		// object destructuring
 		const { height, width } = this.scale;
 
-		let player = this.physics.add.sprite(
+		this.map = this.make.tilemap({ key: "map" });
+
+		const marbleTiles = this.map.addTilesetImage("marble", "marble");
+		const rockTiles = this.map.addTilesetImage("rock", "rock");
+		const sandTiles = this.map.addTilesetImage("sand", "sand");
+		const stoneTiles = this.map.addTilesetImage("stone", "stone");
+
+		this.map.createLayer(
+			"Background",
+			[marbleTiles, rockTiles, sandTiles, stoneTiles],
+			0,
+			0
+		);
+
+
+		const platformLayer = this.map.createLayer(
+			"Platforms",
+			[marbleTiles, rockTiles, sandTiles, stoneTiles],
+			0,
+			0
+		);
+
+			platformLayer.setCollisionByProperty({ collides: true });
+
+			this.coins = this.physics.add.group({
+				key: "coin",
+				quantity: 12,
+				setXY: {x: 18 * 4, y: 0, stepX: 18 * 3},
+				setScale: {x: 0.25, y: 0.25},
+			});
+		this.physics.add.collider(this.coin, platformLayer);
+
+		this.player = this.physics.add.sprite(
 			width / 2,
 			height / 2,
 			"robot",
 			"character_robot_idle.png"
 		);
 
-    player.setCollideWorldBounds(true);
-    player.setBounce(0.5);
+			this.physics.add.collider(this.player, platformLayer);
 
+		this.player.setCollideWorldBounds(true)
+		.setBounce(0.2)
+		.setSize(TILE_SIZE * 2, TILE_SIZE * 4.5)
+		.setScale(0.5)
+		.setOffset(TILE_SIZE * 1.7, TILE_SIZE * 2.6);
 		// single frame
-		player.anims.create({
+		this.player.anims.create({
 			key: PLAYER_ANIMS.idle,
 			frames: [{ key: "robot", frame: "character_robot_idle.png" }],
 		});
 
-		player.anims.create({
+		this.player.anims.create({
+			key: PLAYER_ANIMS.fall,
+			frames: [{ key: "robot", frame: "character_robot_fall.png" }],
+		});
+
+		this.player.anims.create({
 			key: PLAYER_ANIMS.jump,
 			frames: [{ key: "robot", frame: "character_robot_jump.png" }],
 		});
 
 		// multiple frames
-		player.anims.create({
+		this.player.anims.create({
 			key: PLAYER_ANIMS.run,
-			frames: player.anims.generateFrameNames("robot", {
+			frames: this.player.anims.generateFrameNames("robot", {
 				start: 0,
 				end: 2,
 				prefix: "character_robot_run",
@@ -60,9 +114,9 @@ class MainScene extends Phaser.Scene {
 			repeat: -1, // infinite repeat
 		});
 
-		player.anims.create({
+		this.player.anims.create({
 			key: PLAYER_ANIMS.walk,
-			frames: player.anims.generateFrameNames("robot", {
+			frames: this.player.anims.generateFrameNames("robot", {
 				start: 0,
 				end: 7,
 				prefix: "character_robot_walk",
@@ -71,22 +125,9 @@ class MainScene extends Phaser.Scene {
 			frameRate: 10, // frames per second
 			repeat: -1, // infinite repeat
 		});
-
-    player.anims.create({
-			key: PLAYER_ANIMS.attack,
-			frames: player.anims.generateFrameNames("robot", {
-				start: 0,
-				end: 2,
-				prefix: "character_robot_attack",
-				suffix: ".png",
-			}),
-			frameRate: 8, // frames per second
-			repeat: -1, // infinite repeat
-		});
-
-    player.anims.create({
+		this.player.anims.create({
 			key: PLAYER_ANIMS.cheer,
-			frames: player.anims.generateFrameNames("robot", {
+			frames: this.player.anims.generateFrameNames("robot", {
 				start: 0,
 				end: 1,
 				prefix: "character_robot_cheer",
@@ -96,24 +137,72 @@ class MainScene extends Phaser.Scene {
 			repeat: -1, // infinite repeat
 		});
 
-		player.play(PLAYER_ANIMS.walk);
+		this.player.play(PLAYER_ANIMS.run);
+
+		this.cursors = this.input.keyboard.addKeys({
+			left: Phaser.Input.Keyboard.KeyCodes.A,
+			leftArrow: Phaser.Input.Keyboard.KeyCodes.LEFT,
+			right: Phaser.Input.Keyboard.KeyCodes.D,
+			rightArrow: Phaser.Input.Keyboard.KeyCodes.RIGHT,
+			jump: Phaser.Input.Keyboard.KeyCodes.SPACE,
+			upArrow: Phaser.Input.Keyboard.KeyCodes.UP,
+			up: Phaser.Input.Keyboard.KeyCodes.W,
+		});
 	}
 
-	update() {}
+	update() {
+		if (this.cursors.left.isDown || this.cursors.leftArrow.isDown) {
+			this.player.setVelocityX(-150);
+		} else if (this.cursors.right.isDown || this.cursors.rightArrow.isDown) {
+			this.player.setVelocityX(150);
+		} else {
+			this.player.setVelocityX(0);
+		}
+
+		if (
+			(this.cursors.up.isDown ||
+				this.cursors.upArrow.isDown ||
+				this.cursors.jump.isDown) &&
+			this.player.body.onFloor()
+		) {
+			this.player.setVelocityY(-300);
+		}
+
+		// let x = this.player.body.velocity.x;
+		// let y = this.player.body.velocity.y;
+		let { x, y } = this.player.body.velocity;
+
+		this.player.flipX = x < 0;
+
+		if (this.player.body.onFloor()) {
+			if (x === 0) {
+				this.player.play(PLAYER_ANIMS.idle);
+			} else {
+				this.player.play(PLAYER_ANIMS.run, true);
+			}
+		} else {
+			if (y < 0) {
+				this.player.play(PLAYER_ANIMS.jump, true);
+			} else {
+				this.player.play(PLAYER_ANIMS.fall, true);
+			}
+		}
+	}
 }
 
 /** @type {Phaser.Types.Core.GameConfig} */
 const config = {
 	type: Phaser.WEBGL,
-	width: 400,
-	height: 400,
+	width: 44 * TILE_SIZE,
+	height: 33 * TILE_SIZE,
 	scene: [MainScene],
-  physics: {
-    default: "arcade",
-    arcade: {
-      gravity: { y: 1250 },
-    }
-  }
+	physics: {
+		default: "arcade",
+		arcade: {
+			gravity: { y: 300 },
+			debug: false,
+		},
+	},
 };
 
 const game = new Phaser.Game(config);

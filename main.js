@@ -69,7 +69,7 @@ class MainScene extends Phaser.Scene {
 				setXY: {x: 18 * 4, y: 0, stepX: 18 * 3},
 				setScale: {x: 0.25, y: 0.25},
 			});
-		this.physics.add.collider(this.coin, platformLayer);
+		this.physics.add.collider(this.coins, platformLayer);
 
 		this.player = this.physics.add.sprite(
 			width / 2,
